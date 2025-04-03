@@ -1,0 +1,154 @@
+// SQL
+CREATE DATABASE StudentPortalDB;
+
+USE StudentPortalDB;
+
+CREATE TABLE attendance (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    student_name VARCHAR(100),
+    student_id VARCHAR(20),
+    date DATE,
+    status ENUM('Present', 'Absent', 'Late')
+);
+
+// index.jsp
+<%@ page contentType="text/html;charset=UTF-8" %>
+<html>
+<head>
+    <title>Student Attendance</title>
+</head>
+<body>
+    <h2>Enter Attendance Details</h2>
+    <form action="AttendanceServlet" method="post">
+        <label for="name">Student Name:</label>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="studentId">Student ID:</label>
+        <input type="text" id="studentId" name="studentId" required><br><br>
+
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" required><br><br>
+
+        <label for="status">Status:</label>
+        <select id="status" name="status">
+            <option value="Present">Present</option>
+            <option value="Absent">Absent</option>
+            <option value="Late">Late</option>
+        </select><br><br>
+
+        <input type="submit" value="Submit Attendance">
+    </form>
+
+    <h3><a href="viewAttendance.jsp">View Attendance Records</a></h3>
+</body>
+</html>
+
+//Java servlet
+package com.example;
+
+import java.io.IOException;
+import java.sql.*;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@WebServlet("/AttendanceServlet")
+public class AttendanceServlet extends HttpServlet {
+    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/StudentPortalDB";
+    private static final String JDBC_USER = "root";
+    private static final String JDBC_PASS = "yourpassword";
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String name = request.getParameter("name");
+        String studentId = request.getParameter("studentId");
+        String date = request.getParameter("date");
+        String status = request.getParameter("status");
+
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASS);
+            String sql = "INSERT INTO attendance (student_name, student_id, date, status) VALUES (?, ?, ?, ?)";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, name);
+            stmt.setString(2, studentId);
+            stmt.setString(3, date);
+            stmt.setString(4, status);
+            stmt.executeUpdate();
+
+            stmt.close();
+            conn.close();
+
+            response.sendRedirect("viewAttendance.jsp");
+        } catch (Exception e) {
+            response.getWriter().println("<h3>Error: " + e.getMessage() + "</h3>");
+        }
+    }
+}
+
+// viewAttendance.jsp
+<%@ page import="java.sql.*" %>
+<%@ page contentType="text/html;charset=UTF-8" %>
+<html>
+<head>
+    <title>Attendance Records</title>
+</head>
+<body>
+    <h2>Attendance Records</h2>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Student Name</th>
+            <th>Student ID</th>
+            <th>Date</th>
+            <th>Status</th>
+        </tr>
+
+        <%
+            String JDBC_URL = "jdbc:mysql://localhost:3306/StudentPortalDB";
+            String JDBC_USER = "root";
+            String JDBC_PASS = "yourpassword";
+
+            try {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+                Connection conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASS);
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery("SELECT * FROM attendance");
+
+                while (rs.next()) {
+        %>
+                    <tr>
+                        <td><%= rs.getInt("id") %></td>
+                        <td><%= rs.getString("student_name") %></td>
+                        <td><%= rs.getString("student_id") %></td>
+                        <td><%= rs.getDate("date") %></td>
+                        <td><%= rs.getString("status") %></td>
+                    </tr>
+        <%
+                }
+                stmt.close();
+                conn.close();
+            } catch (Exception e) {
+                out.println("<tr><td colspan='5'>Error: " + e.getMessage() + "</td></tr>");
+            }
+        %>
+    </table>
+    <br><a href="index.jsp">Back to Home</a>
+</body>
+</html>
+
+
+//web.xml
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee" version="3.1">
+    <servlet>
+        <servlet-name>AttendanceServlet</servlet-name>
+        <servlet-class>com.example.AttendanceServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AttendanceServlet</servlet-name>
+        <url-pattern>/AttendanceServlet</url-pattern>
+    </servlet-mapping>
+</web-app>
+
